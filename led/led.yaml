@@ -1,0 +1,129 @@
+esphome:
+  name: led
+  platform: ESP32
+  board: nodemcu-32s
+  project:
+    name: "marshallasch.dna_lamp"
+    version: "1.0.1"
+
+wifi:
+  ssid: "78-2.4G"
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "DNA Fallback Hotspot"
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: !secret api_password
+
+ota:
+  password: !secret ota_password
+
+globals:
+   - id: actual_effect
+     type: int
+     restore_value: no
+     initial_value: '0'
+
+light:
+  - platform: fastled_clockless
+    name: "Side A"
+    id: led_A
+    chipset: WS2812
+    pin: GPIO13
+    num_leds: 33
+    rgb_order: GRB
+    effects:
+        - random:
+            name: "random"
+        - addressable_rainbow:
+            name:  "rainbow"
+        - addressable_random_twinkle:
+            name: "twinkle"
+        - addressable_flicker:
+            name: "flicker"
+        - addressable_fireworks:
+            name: "fireworks"
+        - addressable_color_wipe:
+            name: "wipe"
+
+
+  - platform: fastled_clockless
+    name: "Side B"
+    id: led_B
+    chipset: WS2812
+    pin: GPIO14
+    num_leds: 33
+    rgb_order: GRB
+    effects:
+        - random:
+            name: "random"
+        - addressable_rainbow:
+            name: "rainbow"
+        - addressable_random_twinkle:
+            name: "twinkle"
+        - addressable_flicker:
+            name: "flicker"
+        - addressable_fireworks:
+            name: "fireworks"
+        - addressable_color_wipe:
+            name: "wipe"
+
+binary_sensor:
+  - platform: gpio
+    id: button
+    pin:
+      number: GPIO26
+      mode: INPUT_PULLDOWN
+    on_click:
+      - then:
+          - light.toggle: led_A
+          - light.toggle: led_B
+      - min_length: 1000ms
+        max_length: 5000ms
+        then:
+          lambda: |-
+            auto call = id(led_A).turn_on();
+            auto call2 = id(led_B).turn_on();
+
+            switch(id(actual_effect)) {
+              case 0:
+                call.set_effect("random");
+                call2.set_effect("random");
+                break;
+              case 1:
+                call.set_effect("rainbow");
+                call2.set_effect("rainbow");
+                break;
+              case 2:
+                call.set_effect("twinkle");
+                call2.set_effect("twinkle");
+                break;
+              case 3:
+                call.set_effect("flicker");
+                call2.set_effect("flicker");
+                break;
+              case 4:
+                call.set_effect("fireworks");
+                call2.set_effect("fireworks");
+                break;
+              case 5:
+                call.set_effect("wipe");
+                call2.set_effect("wipe");
+                break;
+            }
+
+            if (id(actual_effect) == 5) //Or your maximums effects
+                id(actual_effect) = 0;
+            else
+                id(actual_effect) += 1;
+
+            call.perform();
+            call2.perform();
